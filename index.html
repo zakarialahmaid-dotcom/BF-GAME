@@ -1046,7 +1046,7 @@
     job(["assets/superdeal.png","assets/products/superdeal.png"],function(s){ASSETS.superdeal=s;});
     left=jobs.length;
     function finish(){ if(finished)return; finished=true; done(); }
-    function one(){ left--; playBtn.textContent="Chargement… "+Math.round((1-left/jobs.length)*100)+"%"; if(left<=0) finish(); }
+    function one(){ left--; if(finished) return; playBtn.textContent="Chargement… "+Math.round((1-left/jobs.length)*100)+"%"; if(left<=0) finish(); }
     jobs.forEach(function(j){
       (function attempt(i){
         var im=new Image();
