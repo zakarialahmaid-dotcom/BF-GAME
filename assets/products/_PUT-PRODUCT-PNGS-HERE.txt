@@ -1,0 +1,5 @@
+Drop transparent PNGs here, named exactly:
+phone.png  headphones.png  sneakers.png  watch.png  tshirt.png  tv.png
+laptop.png  bag.png  beauty.png  appliance.png  camera.png  controller.png
+dress.png  toy.png
+They load automatically. Missing ones fall back to an emoji.

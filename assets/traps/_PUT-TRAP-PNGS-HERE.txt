@@ -1,0 +1,3 @@
+Drop transparent PNGs here, named exactly:
+bomb.png  fake.png  broken.png
+They load automatically. Missing ones fall back to an emoji.
