@@ -52,7 +52,8 @@ in `index.html`.
 - **+10** per product, **+25** for gold deals, **+50** for the black Super Deal.
 - Every 5 catches in a row raises the multiplier (x2, x3…). Missing a good deal resets it.
 - Red traps cost one of your 3 lives. A rare green ❤️ item gives one back.
-- A new level every 15 seconds: a slightly faster belt and more traps.
+- A new level every 15 seconds: a faster belt, more traps, and pairs of items from level 2. Most rounds end within about a minute; only skilled players get much further.
+- Fair hitbox: deals count if they touch the box (even a beat late), traps only if they clearly hit it.
 - The glowing lane in front of the box shows where you'll catch, and it turns red when a trap is lined up.
 - Fair by design: a trap never shares a lane with a deal arriving at the same time, so there's always a way out.
 - Calm by design: no scrolling stripes, screen shake or looping wiggles, to avoid motion sickness.

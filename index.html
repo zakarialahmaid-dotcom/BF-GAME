@@ -648,11 +648,12 @@
 
   // ---- spawning ----
   function diff(){
-    var t=S.elapsed, travel=Math.max(1.45, 3.0 - t*0.012);  // seconds from horizon to box, floors at ~130s
+    // Tuned so a casual run ends within about a minute; past 60s only skilled players keep up.
+    var t=S.elapsed, travel=Math.max(0.9, 2.5 - t*0.03);   // seconds from horizon to box: ~1.3s at 40s, 0.9s floor at ~53s
     return {
       rate: catchP/travel,                                  // progress per second
-      interval: Math.max(480, 1000 - t*5),                  // ms between spawns
-      badChance: t<8 ? 0 : Math.min(0.3, 0.12 + t*0.002)    // share of traps (none during the warm-up)
+      interval: Math.max(320, 900 - t*11),                  // ms between spawns
+      badChance: t<6 ? 0 : Math.min(0.55, 0.18 + t*0.007)   // share of traps (none during the warm-up)
     };
   }
   function spawn(avoid){
@@ -669,7 +670,7 @@
     if(isBad){
       var tp=TRAPS[(Math.random()*TRAPS.length)|0]; cls="bad"; kind="bad";
       inner='<span class="shadow"></span>'+glyph(tp.e,ASSETS.traps[tp.k])+tagHTML("bad");
-    }else if(S.lives<3 && S.elapsed>20 && Math.random()<0.03){
+    }else if(S.lives<3 && S.elapsed>20 && S.elapsed<45 && Math.random()<0.025){
       kind="life"; cls="life"; pts=0;
       inner='<span class="shadow"></span>'+glyph("❤️","")+tagHTML("life");
     }else{
@@ -695,13 +696,16 @@
   // ---- catch ----
   // the lane the box is actually in (mid-hop counts as whichever lane it's closest to)
   function boxLi(){ var b=1, bd=9; for(var i=0;i<3;i++){ var dd=Math.abs(S.boxLane-LANES[i]); if(dd<bd){ bd=dd; b=i; } } return b; }
+  // Hitbox: real overlap between the box and the item, measured at the box line. Deals get a generous
+  // reach (a near-miss still counts), traps a tight one (only a clear hit costs a life).
   function hits(it){
-    var s=sOf(it.p);
-    return {hit:it.li===boxLi(), ix:xOf(it.lane,s), s:s};
+    var s=sOf(it.p), ix=xOf(it.lane,s), dx=Math.abs(ix-xOf(S.boxLane,1)), iw=BIG*s;
+    var reach=it.bad ? boxW*0.25+iw*0.15 : boxW*0.5+iw*0.25;
+    return {hit:dx<reach, ix:ix, s:s};
   }
-  function resolve(it){
+  function resolve(it,h){
     if(!running) return;
-    var h=hits(it), bx=xOf(S.boxLane,1), fy=boxY-boxW*0.55;
+    h=h||hits(it); var bx=xOf(S.boxLane,1), fy=boxY-boxW*0.55;
     it.done=true;
     if(h.hit){
       if(it.bad){
@@ -808,7 +812,7 @@
 
     // spawn (bursts of two once things get hectic)
     S.spawnT-=dt*1000;
-    if(S.spawnT<=0){ var ln=spawn(); if(S.level>=5 && Math.random()<0.2) spawn(ln); S.spawnT=d.interval; }
+    if(S.spawnT<=0){ var ln=spawn(); if(S.level>=2 && Math.random()<Math.min(0.5,0.15+(S.level-2)*0.1)) spawn(ln); S.spawnT=d.interval; }
 
     // items approach
     var threat=false;
@@ -820,8 +824,14 @@
       var s=sOf(it.p), x=xOf(it.lane,s), y=yOf(s);
       it.el.style.transform="translate("+x+"px,"+y+"px) scale("+s+")";
       it.el.style.zIndex=String(100+Math.round(it.p*390));
-      if(it.bad && it.p>catchP-0.4 && S.elapsed>=S.invuln && hits(it).hit) threat=true;
-      if(it.p>=catchP){ S.items.splice(i,1); resolve(it); if(!running) break; }
+      if(it.bad && it.p>catchP-0.4 && S.elapsed>=S.invuln && it.li===boxLi()) threat=true;
+      // catch window: a deal can be grabbed from just before the box line to just after it, so sliding
+      // in a beat late still counts; a trap only hurts in a short slot right at the line
+      if(it.p>=catchP-0.02){
+        var h=hits(it), slot=it.bad ? (it.p>=catchP && it.p<catchP+0.025) : true;
+        if(h.hit && slot){ S.items.splice(i,1); resolve(it,h); if(!running) break; continue; }
+        if(it.p>=catchP+0.05){ h.hit=false; S.items.splice(i,1); resolve(it,h); if(!running) break; }
+      }
     }
     if(aimEl) aimEl.classList.toggle("danger",threat);
     updateFx(dt);
