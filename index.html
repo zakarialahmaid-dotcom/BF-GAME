@@ -100,7 +100,6 @@
 
   /* ---------- 3D FIELD ---------- */
   #field{position:relative;flex:1;min-height:0;overflow:hidden;cursor:pointer;z-index:1;touch-action:none}
-  #field.mouse{cursor:none}
   #scene{position:absolute;inset:0;width:100%;height:100%;z-index:1}
   #backdrop{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center bottom;background-repeat:no-repeat}
   #aim{transition:fill .15s}
@@ -218,9 +217,16 @@
   /* swipe hint */
   #hint{position:absolute;left:50%;bottom:24%;z-index:565;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;transition:opacity .35s}
   #hint[hidden]{display:flex;opacity:0}
-  #hint .hand{font-size:42px;animation:swipe 1.4s ease-in-out infinite;filter:drop-shadow(0 4px 8px rgba(0,0,0,.6))}
+  #hint .hand{font-size:42px;animation:tap 1.2s ease-in-out infinite;filter:drop-shadow(0 4px 8px rgba(0,0,0,.6))}
   #hint .txt{font-weight:700;font-size:14px;background:rgba(0,0,0,.72);border:1px solid var(--line);padding:7px 12px;border-radius:999px;white-space:nowrap}
-  @keyframes swipe{0%,100%{transform:translateX(-46px) rotate(-10deg)}50%{transform:translateX(46px) rotate(10deg)}}
+  @keyframes tap{50%{transform:scale(.82)}}
+  /* tap-zone cues in the bottom corners */
+  .tapcue{position:absolute;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:555;width:46px;height:46px;border-radius:50%;
+    display:grid;place-items:center;font-family:var(--head);font-weight:900;font-size:30px;line-height:1;padding-bottom:4px;
+    color:rgba(255,255,255,.6);background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.14);pointer-events:none}
+  #cueL{left:max(12px,env(safe-area-inset-left,0px))} #cueR{right:max(12px,env(safe-area-inset-right,0px))}
+  .tapcue.on{animation:cue .25s ease-out}
+  @keyframes cue{0%{background:var(--jumia);color:#000;transform:scale(1.12)}100%{transform:none}}
 
   /* ---------- OVERLAYS ---------- */
   .overlay{
@@ -351,7 +357,8 @@
     </div>
     <div id="danger"></div><div id="hurt"></div><div id="flash"></div>
     <div id="banner"><div class="b1"></div><div class="b2"></div></div>
-    <div id="hint" hidden><div class="hand">👆</div><div class="txt">Glisse pour déplacer la caisse</div></div>
+    <div id="hint" hidden><div class="hand">👆</div><div class="txt">Touche à gauche ou à droite pour changer de voie</div></div>
+    <div class="tapcue" id="cueL" aria-hidden="true">‹</div><div class="tapcue" id="cueR" aria-hidden="true">›</div>
     <div id="count" hidden><span></span></div>
   </div>
 
@@ -359,7 +366,7 @@
   <div class="overlay" id="startScreen">
     <div class="brandrow"><span class="wordmark">JUMIA<b>★</b></span><span class="bf-badge">BLACK <span class="o">FRIDAY</span></span></div>
     <h1 class="title">La Caisse<br><span class="hl">Rush</span></h1>
-    <p class="subtitle">Les produits foncent vers toi sur le tapis. Glisse la caisse pour attraper les bonnes affaires et esquiver les arnaques&nbsp;!</p>
+    <p class="subtitle">Les produits arrivent sur 3 voies. Touche à gauche ou à droite de l'écran pour changer de voie, attrape les bonnes affaires et esquive les arnaques&nbsp;!</p>
     <div class="how">
       <div class="how-row"><div class="chip g" data-art="products/phone">📦</div><div><b>Attrape</b> les produits Jumia&nbsp;: <b>+10</b>, et <b>+25</b> pour les deals dorés.</div></div>
       <div class="how-row"><div class="chip s" data-art="superdeal">★</div><div><b>Super Deal</b> noir&nbsp;: <b>+50</b>, vise-le&nbsp;!</div></div>
@@ -368,7 +375,7 @@
     </div>
     <button class="btn pulse" id="playBtn" disabled>Chargement…</button>
     <div class="best">Meilleur score&nbsp;: <b id="bestStart">0</b></div>
-    <div class="keys"><kbd>←</kbd> <kbd>→</kbd> ou la souris pour bouger · <kbd>Espace</kbd> pause</div>
+    <div class="keys"><kbd>←</kbd> <kbd>→</kbd> ou clic gauche / droite pour changer de voie · <kbd>Espace</kbd> pause</div>
   </div>
 
   <!-- PAUSE -->
@@ -419,7 +426,7 @@
       countWrap=$("#count"), countSpan=countWrap.firstElementChild,
       startScreen=$("#startScreen"), overScreen=$("#overScreen"), pauseScreen=$("#pauseScreen"),
       soundBtn=$("#sound"), pauseBtn=$("#pause"), levelEl=$("#level"), playBtn=$("#playBtn"),
-      banner=$("#banner"), hint=$("#hint"), fxCanvas=$("#fx"), toastEl=$("#toast");
+      banner=$("#banner"), hint=$("#hint"), cueL=$("#cueL"), cueR=$("#cueR"), fxCanvas=$("#fx"), toastEl=$("#toast");
   var aimEl=null;
   var RM=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -471,6 +478,7 @@
   // screen instead of idling at the horizon and then rushing the box in the last frames.
   var sFar=0.28, sNear=1, EXP=1.25;
   var cx=0, halfWnear=0, yVanish=0, yNear=0, BIG=130, catchP=0.9, boxY=0, boxW=160, fieldTop=0, laneMax=1;
+  var LANES=[-0.62,0,0.62]; // three fixed lanes: left, middle, right
   function sOf(p){ return sFar+(sNear-sFar)*Math.pow(p<0?0:p,EXP); }
   function yOf(s){ return yVanish+(yNear-yVanish)*(s-sFar)/(sNear-sFar); }
   function xOf(lane,s){ return cx+lane*halfWnear*s; }
@@ -478,7 +486,7 @@
   // ---- state ----
   var S=null, raf=0, lastT=0, running=false, live=false, paused=false, muted=false, best=0, games=0;
   // belt stripes rushing at the camera were the main motion-sickness trigger (vection), so none by default
-  var rungs=[], RUNG_N=0, keyDir=0, keys={};
+  var rungs=[], RUNG_N=0;
   function load(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
   function save(k,v){ try{ localStorage.setItem(k,String(v)); }catch(e){} }
   best=parseInt(load("jumia_cr_best"),10)||0;
@@ -486,7 +494,7 @@
   muted=load("jumia_cr_muted")==="1";
 
   function freshState(){
-    return {score:0,lives:3,combo:0,maxCombo:0,caught:0,supers:0,items:[],fx:[],spawnT:0,elapsed:0,boxLane:0,targetLane:0,prevLane:0,lean:0,level:0,mult:1,moved:false,invuln:0,freeze:0,lastSpawn:null};
+    return {score:0,lives:3,combo:0,maxCombo:0,caught:0,supers:0,items:[],fx:[],spawnT:0,elapsed:0,boxLane:0,targetLane:0,prevLane:0,lean:0,level:0,mult:1,moved:false,invuln:0,freeze:0,lastSpawn:null,li:1,switchT:-9,switchFrom:-1};
   }
   function multOf(c){ return 1+Math.floor(c/5); }
 
@@ -564,6 +572,7 @@
     var sC=sFar+(sNear-sFar)*(boxY-yVanish)/(yNear-yVanish); catchP=Math.pow((sC-sFar)/(sNear-sFar),1/EXP);
     boxW=Math.max(120,BIG*1.15); var boxH=boxW*0.72;
     laneMax=Math.max(0.6,1-boxW*0.36/halfWnear); // keep the box on the belt
+    var LX=Math.min(0.62,laneMax); LANES=[-LX,0,LX];
     box.style.width=boxW+"px"; box.style.height=boxH+"px";
     box.style.marginLeft=(-boxW/2)+"px"; box.style.marginTop=(-boxH*0.6)+"px";
     var nl=cx-halfWnear, nr=cx+halfWnear, fl=cx-halfWnear*sFar, fr=cx+halfWnear*sFar;
@@ -591,7 +600,7 @@
       '<polygon points="'+belt+'" fill="url(#beltg)" opacity="'+(beltTex?0.22:0)+'"/>'+
       '<polygon points="'+belt+'" fill="url(#beltfade)"/>'+
       '<polygon id="aim" fill="url(#aimgood)" points=""/>'+
-      '<line x1="'+cx+'" y1="'+yVanish+'" x2="'+cx+'" y2="'+yNear+'" stroke="rgba(255,255,255,.05)" stroke-width="2"/>'+
+      [-1,1].map(function(sd){ var m=sd*LANES[2]/2; return '<line x1="'+xOf(m,sFar)+'" y1="'+yVanish+'" x2="'+xOf(m,1)+'" y2="'+yNear+'" stroke="rgba(255,220,160,.34)" stroke-width="3" stroke-dasharray="12 12"/>'; }).join('')+
       // glowing side rails
       '<g filter="url(#glow)" opacity=".8"><line x1="'+fl+'" y1="'+yVanish+'" x2="'+nl+'" y2="'+yNear+'" stroke="#ff9900" stroke-width="8"/><line x1="'+fr+'" y1="'+yVanish+'" x2="'+nr+'" y2="'+yNear+'" stroke="#ff9900" stroke-width="8"/></g>'+
       '<polygon points="'+fl+','+yVanish+' '+nl+','+yNear+' '+(nl+10)+','+yNear+' '+(fl+2)+','+yVanish+'" fill="url(#rail)"/>'+
@@ -673,16 +682,13 @@
   function spawn(avoid){
     var d=diff(), isBad=Math.random()<d.badChance;
     var el=document.createElement("div");
-    var lane=(Math.random()*1.84-0.92);
-    // fairness: never stack a trap on a deal arriving at the same time, and keep burst pairs apart
-    var last=S.lastSpawn;
-    if(last && S.elapsed-last.t<0.5 && last.bad!==isBad && Math.abs(lane-last.lane)<0.55) lane=last.lane+(last.lane>0?-0.75:0.75);
-    if(avoid!=null && Math.abs(lane-avoid)<0.6) lane=avoid+(avoid>0?-0.8:0.8);
-    lane=Math.max(-0.92,Math.min(0.92,lane));
-    S.lastSpawn={t:S.elapsed,lane:lane,bad:isBad};
-    // lateral drift kicks in after a few seconds so you can't just pre-aim
-    var drift=Math.min(0.2, Math.max(0,(S.elapsed-30)*0.004));
-    var vlane=(drift>0 && Math.random()<0.55)?(Math.random()*2-1)*drift:0;
+    // fairness: never put a trap in the lane of a deal arriving at the same time, and keep burst pairs apart
+    var last=S.lastSpawn, ex=[];
+    if(last && S.elapsed-last.t<0.5 && last.bad!==isBad) ex.push(last.li);
+    if(avoid!=null) ex.push(avoid);
+    var free=[0,1,2].filter(function(i){ return ex.indexOf(i)<0; });
+    var li=free.length?free[(Math.random()*free.length)|0]:(Math.random()*3)|0;
+    S.lastSpawn={t:S.elapsed,li:li,bad:isBad};
     var pts=10, kind="good", cls="good", inner;
     if(isBad){
       var tp=TRAPS[(Math.random()*TRAPS.length)|0]; cls="bad"; kind="bad";
@@ -700,8 +706,8 @@
       }
     }
     el.className="item "+cls; el.innerHTML=inner; field.insertBefore(el,box);
-    S.items.push({el:el,lane:lane,vlane:vlane,p:0,vp:d.rate*(0.92+Math.random()*0.16),bad:isBad,kind:kind,pts:pts,done:false});
-    return lane;
+    S.items.push({el:el,li:li,lane:LANES[li],p:0,vp:d.rate*(0.92+Math.random()*0.16),bad:isBad,kind:kind,pts:pts,done:false});
+    return li;
   }
 
   function floater(text,x,y,color,cls){
@@ -711,12 +717,11 @@
   }
 
   // ---- catch ----
+  // the lane the box is actually in (mid-hop counts as whichever lane it's closest to)
+  function boxLi(){ var b=1, bd=9; for(var i=0;i<3;i++){ var dd=Math.abs(S.boxLane-LANES[i]); if(dd<bd){ bd=dd; b=i; } } return b; }
   function hits(it){
-    var s=sOf(it.p), ix=xOf(it.lane,s), iw=BIG*s, bx=xOf(S.boxLane,1);
-    var bw=boxW*0.42; // box half width
-    // catch window tightens as the game speeds up
-    var tol=Math.max(0.68, 0.85 - S.elapsed*0.0015);
-    return {hit:Math.abs(ix-bx) < (bw + iw*0.5)*tol, dx:Math.abs(ix-bx), lim:(bw+iw*0.5)*tol, ix:ix, s:s};
+    var s=sOf(it.p);
+    return {hit:it.li===boxLi(), ix:xOf(it.lane,s), s:s};
   }
   function resolve(it){
     if(!running) return;
@@ -751,7 +756,7 @@
     }else{
       animateOut(it,h,"miss");
       if(it.bad){
-        if(h.dx<h.lim*1.35){ floater("Esquivé !",h.ix,boxY-boxW*0.7,"#cfcfd4","small"); sDodge(); }
+        if(S.switchFrom===it.li && S.elapsed-S.switchT<0.7){ floater("Esquivé !",h.ix,boxY-boxW*0.7,"#cfcfd4","small"); sDodge(); }
       }else if(it.kind!=="life" && S.combo>0){ // missed a good deal
         if(S.combo>=5){ floater("Combo perdu",cx,boxY-boxW*1.0,"#a8a8a8","small"); sBreak(); }
         S.combo=0; renderMeter(true);
@@ -813,12 +818,10 @@
     if(lvl!==S.level){ S.level=lvl; levelEl.textContent="NIV "+lvl; if(lvl>1) levelUp(lvl); }
 
     // box follow
-    if(keyDir){ S.targetLane=clampLane(S.targetLane+keyDir*2.7*dt); }
-    S.boxLane += (S.targetLane-S.boxLane)*Math.min(1,dt*16);
-    if(S.boxLane<-laneMax)S.boxLane=-laneMax; if(S.boxLane>laneMax)S.boxLane=laneMax;
+    S.targetLane=LANES[S.li];
+    S.boxLane += (S.targetLane-S.boxLane)*Math.min(1,dt*20);
     placeBox(dt); placeAim();
-    if(!S.moved && Math.abs(S.targetLane)>0.08){ S.moved=true; hideHint(); }
-    if(S.elapsed>4.5) hideHint();
+    if(S.elapsed>6) hideHint();
 
     // rungs
     for(var r=0;r<rungs.length;r++){ rungs[r]._p+=d.rate*dt; if(rungs[r]._p>=1) rungs[r]._p-=1; }
@@ -834,7 +837,7 @@
       var it=S.items[i];
       if(it.done){ S.items.splice(i,1); continue; }
       it.p+=it.vp*dt;
-      if(it.vlane){ it.lane+=it.vlane*dt; if(it.lane<-0.92){it.lane=-0.92;it.vlane=-it.vlane;} else if(it.lane>0.92){it.lane=0.92;it.vlane=-it.vlane;} }
+      it.lane=LANES[it.li];
       var s=sOf(it.p), x=xOf(it.lane,s), y=yOf(s);
       it.el.style.transform="translate("+x+"px,"+y+"px) scale("+s+")";
       it.el.style.zIndex=String(100+Math.round(it.p*390));
@@ -884,7 +887,7 @@
     })();
   }
   function endRun(){
-    running=false; live=false; cancelAnimationFrame(raf); pauseBtn.hidden=true; hideHint(); keyDir=0;
+    running=false; live=false; cancelAnimationFrame(raf); pauseBtn.hidden=true; hideHint();
     if(aimEl) aimEl.classList.remove("danger");
     $("#danger").classList.remove("on"); livesEl.classList.remove("danger"); box.classList.remove("blink");
     sOver();
@@ -918,7 +921,7 @@
   function setPaused(p){
     if(!running||!live) return;
     paused=p; pauseScreen.hidden=!p;
-    if(p){ keyDir=0; keys={}; setTimeout(function(){ $("#resumeBtn").focus({preventScroll:true}); },50); }
+    if(p){ setTimeout(function(){ $("#resumeBtn").focus({preventScroll:true}); },50); }
     else lastT=performance.now();
   }
   function togglePause(){ setPaused(!paused); }
@@ -931,45 +934,35 @@
   }
 
   // ---- input ----
-  // touch: relative drag (the finger never hides the box); mouse: the box follows the cursor
-  function laneFromX(clientX){ var r=field.getBoundingClientRect(); return (clientX-r.left-cx)/halfWnear; }
-  function clampLane(l){ return l<-laneMax?-laneMax:(l>laneMax?laneMax:l); }
-  var drag=null;
+  // three lanes: tap/click the left or right half of the screen (or press an arrow key) to hop one lane.
+  // Acting on pointerdown, not on release, keeps it instant.
+  function stepLane(dir){
+    if(!running||paused||!live) return;
+    pulseClass(dir<0?cueL:cueR,"on");
+    var n=Math.max(0,Math.min(2,S.li+dir)); if(n===S.li) return;
+    S.switchFrom=S.li; S.switchT=S.elapsed; S.li=n;
+    tone(dir<0?520:620,0.05,"sine",0.03);
+    if(!S.moved){ S.moved=true; hideHint(); }
+  }
   field.addEventListener("pointerdown",function(e){
     if(!running||paused)return;
-    if(e.pointerType==="mouse"){ S.targetLane=clampLane(laneFromX(e.clientX)); }
-    else{ drag={id:e.pointerId,x:e.clientX,lane:S.targetLane}; try{field.setPointerCapture(e.pointerId);}catch(_){} }
+    var r=field.getBoundingClientRect(); stepLane(e.clientX-r.left<r.width/2?-1:1);
     if(e.cancelable)e.preventDefault();
   });
-  field.addEventListener("pointermove",function(e){
-    if(!running||paused)return;
-    if(e.pointerType==="mouse"){ field.classList.add("mouse"); S.targetLane=clampLane(laneFromX(e.clientX)); }
-    else if(drag&&drag.id===e.pointerId){ S.targetLane=clampLane(drag.lane+(e.clientX-drag.x)/halfWnear*1.35); }
-    if(e.cancelable)e.preventDefault();
-  });
-  function endDrag(e){ if(drag&&drag.id===e.pointerId) drag=null; }
-  field.addEventListener("pointerup",endDrag); field.addEventListener("pointercancel",endDrag);
-  field.addEventListener("pointerleave",function(){ field.classList.remove("mouse"); });
-  function updateKeyDir(){ keyDir=(keys.r?1:0)-(keys.l?1:0); if(keyDir) field.classList.remove("mouse"); }
   window.addEventListener("keydown",function(e){
     var k=e.key, lk=k.length===1?k.toLowerCase():k;
     if(!running){
       if((k==="Enter"||k===" ")&&!startScreen.hidden&&!playBtn.disabled&&document.activeElement!==playBtn){ startGame(); e.preventDefault(); }
       return;
     }
-    if(k==="ArrowLeft"||lk==="a"||lk==="q"){ keys.l=true; updateKeyDir(); e.preventDefault(); }
-    else if(k==="ArrowRight"||lk==="d"){ keys.r=true; updateKeyDir(); e.preventDefault(); }
+    if(k==="ArrowLeft"||lk==="a"||lk==="q"){ if(!e.repeat) stepLane(-1); e.preventDefault(); }
+    else if(k==="ArrowRight"||lk==="d"){ if(!e.repeat) stepLane(1); e.preventDefault(); }
     else if((k===" "||lk==="p"||k==="Escape")&&live&&!e.repeat){
       if(paused&&document.activeElement&&document.activeElement.tagName==="BUTTON"&&k===" ") return; // let Space press the focused button
       togglePause(); e.preventDefault();
     }
   });
-  window.addEventListener("keyup",function(e){
-    var k=e.key, lk=k.length===1?k.toLowerCase():k;
-    if(k==="ArrowLeft"||lk==="a"||lk==="q"){ keys.l=false; updateKeyDir(); }
-    else if(k==="ArrowRight"||lk==="d"){ keys.r=false; updateKeyDir(); }
-  });
-  window.addEventListener("blur",function(){ keys={}; keyDir=0; if(running&&live&&!paused) setPaused(true); });
+  window.addEventListener("blur",function(){ if(running&&live&&!paused) setPaused(true); });
 
   // ---- buttons ----
   playBtn.addEventListener("click",function(){ ac(); startGame(); });

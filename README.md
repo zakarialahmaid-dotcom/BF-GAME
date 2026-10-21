@@ -1,7 +1,8 @@
 # Jumia Caisse Rush 🛒
 
-A mobile-first Black Friday mini-game. A Jumia box rides a conveyor coming toward
-you — slide it left/right to catch the good deals and dodge the red traps. Score,
+A mobile-first Black Friday mini-game. Products ride a 3-lane conveyor toward
+you — tap left/right to move the Jumia box between lanes, catch the good deals
+and dodge the red traps. Score,
 combo multipliers, lives, level-ups, and speed that ramps up as you go.
 
 ## Run it
@@ -53,10 +54,12 @@ in `index.html`.
 - **+10** per product, **+25** for gold deals, **+50** for the black Super Deal.
 - Every 5 catches in a row raises the multiplier (x2, x3…). Missing a good deal resets it.
 - Red traps cost one of your 3 lives. A rare green ❤️ item gives one back.
-- A new level every 15 seconds: faster belt, more traps, items that drift sideways.
+- A new level every 15 seconds: a slightly faster belt and more traps.
 - The glowing lane in front of the box shows where you'll catch, and it turns red when a trap is lined up.
+- Fair by design: a trap never shares a lane with a deal arriving at the same time, so there's always a way out.
+- Calm by design: no scrolling stripes, screen shake or looping wiggles, to avoid motion sickness.
 
 ## Controls
-- **Phone:** drag anywhere. The box moves with your finger's movement, so your finger never covers it.
-- **Desktop:** the box follows the mouse, or use ← → (also A/D or Q/D).
+- **Phone:** tap the left or right half of the screen to move one lane.
+- **Desktop:** click the left/right half, or press ← → (also A/D or Q/D).
 - **Space / P / Esc** to pause. The game also pauses by itself when you switch tabs.
