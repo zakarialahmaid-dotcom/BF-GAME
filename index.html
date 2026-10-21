@@ -203,6 +203,24 @@
   #danger.on{opacity:.55}
 
   /* level-up banner */
+  /* concept phases: a static colour wash on the belt (no motion) + a timer pill at the top */
+  #tint{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;transition:opacity .6s}
+  #field[data-mode=flash] #tint{opacity:1;background:linear-gradient(0deg,rgba(255,186,0,.2),rgba(255,186,0,.05) 55%,transparent)}
+  #field[data-mode=mission] #tint{opacity:1;background:linear-gradient(0deg,rgba(32,172,118,.18),rgba(32,172,118,.04) 55%,transparent)}
+  #field[data-mode=crazy] #tint{opacity:1;background:linear-gradient(0deg,rgba(236,35,38,.2),rgba(255,120,0,.06) 55%,transparent)}
+  #modebar{position:absolute;left:50%;top:8px;z-index:566;transform:translateX(-50%);display:flex;align-items:center;gap:8px;
+    padding:6px 12px;border-radius:999px;background:rgba(0,0,0,.72);border:1.5px solid var(--mc,#ff9900);font-weight:800;font-size:13px;white-space:nowrap;pointer-events:none}
+  #modebar[hidden]{display:none}
+  #modebar .mi{width:22px;height:22px;object-fit:contain}
+  #modebar .mt{width:54px;height:5px;border-radius:3px;background:#2a2a32;overflow:hidden}
+  #modebar .mt i{display:block;height:100%;background:var(--mc,#ff9900)}
+  #field[data-mode=flash] #modebar{--mc:#ffba00}
+  #field[data-mode=mission] #modebar{--mc:#20ac76}
+  #field[data-mode=crazy] #modebar{--mc:#ff5b5d}
+  .item.target{box-shadow:0 0 0 4px #20ac76,0 8px 18px rgba(0,0,0,.35)}
+  .item .tag.mtag{background:#20ac76;color:#fff;font-size:17px}
+  #banner .b1.flash{border-color:#ffba00}#banner .b1.mission{border-color:#20ac76}#banner .b1.crazy{border-color:#ff5b5d}
+  #banner .b1 img{height:1em;vertical-align:-.12em}
   #banner{position:absolute;left:0;right:0;top:30%;z-index:570;display:flex;flex-direction:column;align-items:center;pointer-events:none;opacity:0}
   #banner.on{animation:banner 1.7s cubic-bezier(.2,.8,.3,1) forwards}
   #banner .b1{font-family:var(--head);font-weight:900;font-size:clamp(38px,12vw,64px);color:#fff;text-transform:uppercase;line-height:1;
@@ -330,6 +348,8 @@
     <div id="backdrop"></div>
     <svg id="scene" preserveAspectRatio="none"></svg>
     <div id="catchline"></div>
+    <div id="tint"></div>
+    <div id="modebar" hidden><span class="ml"></span><span class="mt"><i></i></span></div>
     <div id="box">
       <div class="hot"></div>
       <div id="boxLean"><div id="boxSquash">
@@ -360,6 +380,7 @@
       <div class="how-row"><div class="chip g" data-art="products/phone">📦</div><div><b>Attrape</b> les produits Jumia&nbsp;: <b>+10</b>, et <b>+25</b> pour les deals dorés.</div></div>
       <div class="how-row"><div class="chip s" data-art="superdeal">★</div><div><b>Super Deal</b> noir&nbsp;: <b>+50</b>, vise-le&nbsp;!</div></div>
       <div class="how-row"><div class="chip y">🔥</div><div><b>Enchaîne</b> 5 prises sans en rater pour monter le multiplicateur.</div></div>
+      <div class="how-row"><div class="chip s">⏱️</div><div><b>Toutes les 15&nbsp;s</b>, un nouveau défi&nbsp;: Vente Flash ⚡, Mission 🎯, Crazy Hour 🔥.</div></div>
       <div class="how-row"><div class="chip b" data-art="traps/bomb">✕</div><div><b>Esquive</b> les arnaques rouges&nbsp;: elles coûtent une vie.</div></div>
     </div>
     <button class="btn pulse" id="playBtn" disabled>Chargement…</button>
@@ -415,7 +436,7 @@
       countWrap=$("#count"), countSpan=countWrap.firstElementChild,
       startScreen=$("#startScreen"), overScreen=$("#overScreen"), pauseScreen=$("#pauseScreen"),
       soundBtn=$("#sound"), pauseBtn=$("#pause"), levelEl=$("#level"), playBtn=$("#playBtn"),
-      banner=$("#banner"), hint=$("#hint"), fxCanvas=$("#fx"), toastEl=$("#toast");
+      banner=$("#banner"), hint=$("#hint"), modebar=$("#modebar"), fxCanvas=$("#fx"), toastEl=$("#toast");
   var aimEl=null;
   var RM=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -439,19 +460,26 @@
     scene:{ bg:"assets/scene-bg.jpg",start:"assets/screen-start.jpg",gameover:"assets/screen-gameover.jpg" }
   };
   var PRODUCTS=[
-    {k:"phone",e:"📱"},{k:"headphones",e:"🎧"},{k:"sneakers",e:"👟"},{k:"watch",e:"⌚"},
-    {k:"tshirt",e:"👕"},{k:"tv",e:"📺"},{k:"laptop",e:"💻"},{k:"bag",e:"👜"},
-    {k:"beauty",e:"🧴"},{k:"appliance",e:"☕"},{k:"camera",e:"📷"},{k:"controller",e:"🎮"},
-    {k:"dress",e:"👗"},{k:"toy",e:"🧸"}
+    {k:"phone",e:"📱",n:"téléphones"},{k:"headphones",e:"🎧",n:"casques"},{k:"sneakers",e:"👟",n:"baskets"},{k:"watch",e:"⌚",n:"montres"},
+    {k:"tshirt",e:"👕",n:"t-shirts"},{k:"tv",e:"📺",n:"télés"},{k:"laptop",e:"💻",n:"ordinateurs"},{k:"bag",e:"👜",n:"sacs"},
+    {k:"beauty",e:"🧴",n:"soins beauté"},{k:"appliance",e:"☕",n:"cafetières"},{k:"camera",e:"📷",n:"appareils photo"},{k:"controller",e:"🎮",n:"manettes"},
+    {k:"dress",e:"👗",n:"robes"},{k:"toy",e:"🧸",n:"jouets"}
   ];
   var TRAPS=[{k:"bomb",e:"💣"},{k:"fake",e:"✕"},{k:"broken",e:"🧨"}];
-  var LEVEL_LINES=["Ça accélère !","Les arnaques se multiplient…","Mode Black Friday 🔥","Reste concentré !","Tu es inarrêtable !","Vitesse maximale !"];
+  // after the 15s warm-up the round cycles through three concepts, one per level (15s each)
+  var MODES=["flash","mission","crazy"], PHASE=15, MISSION_NEED=3;
+  var MODE_INFO={
+    flash:{t:"Vente Flash ⚡",s:"Points x2, deals dorés en masse… et ça va vite !"},
+    mission:{t:"Mission 🎯"},
+    crazy:{t:"Crazy Hour 🔥",s:"Pluie de Super Deals x3, mais plus d'arnaques !"}
+  };
+  function modeOf(lvl){ return lvl<2 ? "normal" : MODES[(lvl-2)%MODES.length]; }
   var RANKS=[
     {min:0,i:"🛒",t:"Apprenti chasseur"},
-    {min:150,i:"🏷️",t:"Chasseur de deals"},
-    {min:400,i:"⚡",t:"Pro du Black Friday"},
-    {min:800,i:"🔥",t:"Roi des promos"},
-    {min:1500,i:"👑",t:"Légende Jumia"}
+    {min:500,i:"🏷️",t:"Chasseur de deals"},
+    {min:1500,i:"⚡",t:"Pro du Black Friday"},
+    {min:3000,i:"🔥",t:"Roi des promos"},
+    {min:5000,i:"👑",t:"Légende Jumia"}
   ];
   function glyph(e,src){ return src?'<img src="'+src+'" alt="" draggable="false">':'<span class="glyph">'+e+'</span>'; }
   function tagHTML(kind){
@@ -483,7 +511,7 @@
   muted=load("jumia_cr_muted")==="1";
 
   function freshState(){
-    return {score:0,lives:3,combo:0,maxCombo:0,caught:0,supers:0,items:[],fx:[],spawnT:0,elapsed:0,boxLane:0,targetLane:0,prevLane:0,lean:0,level:0,mult:1,moved:false,invuln:0,freeze:0,lastSpawn:null,li:1,switchT:-9,switchFrom:-1,dragging:false};
+    return {score:0,lives:3,combo:0,maxCombo:0,caught:0,supers:0,items:[],fx:[],spawnT:0,elapsed:0,boxLane:0,targetLane:0,prevLane:0,lean:0,level:0,mult:1,moved:false,invuln:0,freeze:0,lastSpawn:null,li:1,switchT:-9,switchFrom:-1,dragging:false,mode:"normal",mission:null,missions:0};
   }
   function multOf(c){ return 1+Math.floor(c/5); }
 
@@ -657,7 +685,7 @@
     };
   }
   function spawn(avoid){
-    var d=diff(), isBad=Math.random()<d.badChance;
+    var d=diff(), isBad=Math.random()<d.badChance+(S.mode==="crazy"?0.08:0);
     var el=document.createElement("div");
     // fairness: never put a trap in the lane of a deal arriving at the same time, and keep burst pairs apart
     var last=S.lastSpawn, ex=[];
@@ -674,16 +702,19 @@
       kind="life"; cls="life"; pts=0;
       inner='<span class="shadow"></span>'+glyph("❤️","")+tagHTML("life");
     }else{
-      var roll=Math.random();
-      if(roll<0.06){ kind="super";cls="super";pts=50; inner='<span class="shadow"></span>'+glyph("★",ASSETS.superdeal)+tagHTML("super"); }
-      else{
+      var roll=Math.random(), superP=S.mode==="crazy"?0.3:0.06, goldP=S.mode==="flash"?0.5:0.24, ms=S.mission, target=false;
+      if(roll<superP){ kind="super";cls="super";pts=50; inner='<span class="shadow"></span>'+glyph("★",ASSETS.superdeal)+tagHTML("super"); }
+      else if(S.mode==="mission" && ms && !ms.done && Math.random()<0.4){
+        target=true; cls="good target";
+        inner='<span class="shadow"></span>'+glyph(ms.p.e,ASSETS.products[ms.p.k])+'<span class="tag mtag">🎯</span>';
+      }else{
         var p=PRODUCTS[(Math.random()*PRODUCTS.length)|0], src=ASSETS.products[p.k];
-        if(roll<0.24){ kind="gold";cls="gold";pts=25; inner='<span class="shadow"></span>'+glyph(p.e,src)+tagHTML("gold"); }
+        if(roll<goldP){ kind="gold";cls="gold";pts=25; inner='<span class="shadow"></span>'+glyph(p.e,src)+tagHTML("gold"); }
         else{ inner='<span class="shadow"></span>'+glyph(p.e,src); }
       }
     }
     el.className="item "+cls; el.innerHTML=inner; field.insertBefore(el,box);
-    S.items.push({el:el,li:li,lane:LANES[li],p:0,vp:d.rate*(0.92+Math.random()*0.16),bad:isBad,kind:kind,pts:pts,done:false});
+    S.items.push({el:el,li:li,lane:LANES[li],p:0,vp:d.rate*(0.92+Math.random()*0.16),bad:isBad,kind:kind,pts:pts,target:!!target,done:false});
     return li;
   }
 
@@ -719,9 +750,10 @@
         floater("+1 ★",bx,fy,"#4fe0a6","big"); burst(bx,boxY-20,12,C_LIFE,{up:60,speed:160,life:.45});
         return;
       }
-      var mult=multOf(S.combo), gain=it.pts*mult;
+      var mult=multOf(S.combo), bonus=S.mode==="flash"?2:(S.mode==="crazy"&&it.kind==="super"?3:1), gain=it.pts*mult*bonus;
       S.score+=gain; S.caught++; S.combo++; if(S.combo>S.maxCombo)S.maxCombo=S.combo;
       setScore(S.score,true); renderMeter();
+      if(it.target && S.mode==="mission" && S.mission && !S.mission.done) missionStep();
       if(it.kind==="super"){
         S.supers++; sSuper(); buzz([15,40,15]); pulseClass($("#flash"),"on");
         floater("SUPER DEAL +"+gain,bx,fy-10,"#ffba00","big"); burst(bx,boxY-20,24,C_SUPER,{speed:220,up:80,size:7,life:.6});
@@ -812,7 +844,7 @@
 
     // spawn (bursts of two once things get hectic)
     S.spawnT-=dt*1000;
-    if(S.spawnT<=0){ var ln=spawn(); if(S.level>=2 && Math.random()<Math.min(0.5,0.15+(S.level-2)*0.1)) spawn(ln); S.spawnT=d.interval; }
+    if(S.spawnT<=0){ var ln=spawn(); if(S.level>=2 && Math.random()<Math.min(0.5,0.15+(S.level-2)*0.1)) spawn(ln); S.spawnT=d.interval*(S.mode==="flash"?0.8:1); }
 
     // items approach
     var threat=false;
@@ -834,14 +866,46 @@
       }
     }
     if(aimEl) aimEl.classList.toggle("danger",threat);
+    if(S.mode!=="normal") modebar.querySelector(".mt i").style.width=(100*(1-(S.elapsed%PHASE)/PHASE)).toFixed(1)+"%";
     updateFx(dt);
     if(running) raf=requestAnimationFrame(tick);
   }
 
   function levelUp(lvl){
-    banner.querySelector(".b1").innerHTML="Niveau <span>"+lvl+"</span>";
-    banner.querySelector(".b2").textContent=LEVEL_LINES[(lvl-2)%LEVEL_LINES.length];
+    if(S.mode==="mission" && S.mission && !S.mission.done) floater("Mission ratée",cx,boxY-boxW*1.0,"#a8a8a8","small");
+    setMode(modeOf(lvl));
+    var info=MODE_INFO[S.mode], b1=banner.querySelector(".b1"), sub=info.s;
+    if(S.mode==="mission"){
+      var mp=S.mission.p, src=ASSETS.products[mp.k];
+      sub="Attrape "+MISSION_NEED+" "+mp.n+" marqués 🎯 : +100 et une vie !";
+      b1.innerHTML=info.t+" "+(src?'<img src="'+src+'" alt="">':mp.e);
+    }else b1.textContent=info.t;
+    b1.className="b1 "+S.mode;
+    banner.querySelector(".b2").textContent=sub;
     pulseClass(banner,"on"); sLevel();
+  }
+  function setMode(m){
+    S.mode=m; field.setAttribute("data-mode",m);
+    if(m==="mission") S.mission={p:PRODUCTS[(Math.random()*PRODUCTS.length)|0],got:0,done:false};
+    modebar.hidden=(m==="normal"); renderModebar();
+  }
+  function renderModebar(){
+    if(S.mode==="normal") return;
+    var ml=modebar.querySelector(".ml");
+    if(S.mode==="mission"){
+      var mp=S.mission.p, src=ASSETS.products[mp.k];
+      ml.innerHTML=(src?'<img class="mi" src="'+src+'" alt="">':mp.e)+" "+(S.mission.done?"Réussie ✓":S.mission.got+" / "+MISSION_NEED);
+    }else ml.textContent=S.mode==="flash"?"⚡ Points x2":"🔥 Super Deals x3";
+  }
+  function missionStep(){
+    var ms=S.mission; ms.got++;
+    if(ms.got>=MISSION_NEED){
+      ms.done=true; S.missions++; S.score+=100; setScore(S.score,true);
+      floater("MISSION RÉUSSIE +100",cx,boxY-boxW*1.1,"#4fe0a6","big");
+      if(S.lives<3){ S.lives++; renderLives(S.lives-1,"gain"); }
+      sLife(); burst(xOf(S.boxLane,1),boxY-20,16,C_LIFE,{up:60,speed:180,life:.5});
+    }
+    renderModebar();
   }
   function showHint(){ hint.hidden=false; }
   function hideHint(){ if(!hint.hidden) hint.hidden=true; }
@@ -860,7 +924,7 @@
     startScreen.hidden=true; overScreen.hidden=true; pauseScreen.hidden=true;
     running=true; live=false; paused=false; pauseBtn.hidden=true;
     renderLives();
-    S.level=1; levelEl.textContent="NIV 1";
+    S.level=1; levelEl.textContent="NIV 1"; setMode("normal");
     games++; save("jumia_cr_games",games);
     if(games<=3) showHint(); else hideHint();
     var n=3; countWrap.hidden=false;
@@ -919,7 +983,7 @@
     clearItems(); countWrap.hidden=true; hideHint(); pauseBtn.hidden=true; box.classList.remove("blink");
     $("#danger").classList.remove("on");
     overScreen.hidden=true; pauseScreen.hidden=true; startScreen.hidden=false; $("#bestStart").textContent=best;
-    S=freshState(); renderLives(); setScore(0); renderMeter(); levelEl.textContent="NIV 1"; placeBox(); placeAim();
+    S=freshState(); renderLives(); setScore(0); renderMeter(); levelEl.textContent="NIV 1"; setMode("normal"); placeBox(); placeAim();
   }
 
   // ---- input ----

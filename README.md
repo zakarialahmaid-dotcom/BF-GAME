@@ -51,6 +51,11 @@ in `index.html`.
 ## Gameplay
 - **+10** per product, **+25** for gold deals, **+50** for the black Super Deal.
 - Every 5 catches in a row raises the multiplier (x2, x3…). Missing a good deal resets it.
+- **A new challenge every 15 seconds** (after a 15s warm-up), on a loop:
+  - **Vente Flash ⚡**: points x2 and lots of gold deals, but items come faster.
+  - **Mission 🎯**: catch 3 of the product marked 🎯 for +100 and an extra life.
+  - **Crazy Hour 🔥**: a rain of Super Deals worth x3, with more traps.
+  A pill at the top shows the current challenge and how much time is left.
 - Red traps cost one of your 3 lives. A rare green ❤️ item gives one back.
 - A new level every 15 seconds: a faster belt, more traps, and pairs of items from level 2. Most rounds end within about a minute; only skilled players get much further.
 - Fair hitbox: deals count if they touch the box (even a beat late), traps only if they clearly hit it.
