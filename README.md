@@ -15,9 +15,7 @@ combo multipliers, lives, level-ups, and speed that ramps up as you go.
 ```
 index.html            the whole game (HTML + CSS + JS in one file)
 assets/
-  scene-bg.jpg        store backdrop
-  scene-belt.jpg      conveyor texture
-  scene-horizon.jpg   glowing storefront at the vanishing point
+  scene-bg.jpg        store backdrop (shown dimmed and blurred behind the track)
   screen-start.jpg    start-screen background
   screen-gameover.jpg game-over background
   box.png             the player's cart
@@ -58,6 +56,7 @@ in `index.html`.
 - The glowing lane in front of the box shows where you'll catch, and it turns red when a trap is lined up.
 - Fair by design: a trap never shares a lane with a deal arriving at the same time, so there's always a way out.
 - Calm by design: no scrolling stripes, screen shake or looping wiggles, to avoid motion sickness.
+- Clean track: three flat dark lanes with a dimmed backdrop, so only the items and the box stand out.
 
 ## Controls
 - **Phone:** tap the left or right half of the screen to move one lane.

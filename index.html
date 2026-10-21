@@ -101,7 +101,7 @@
   /* ---------- 3D FIELD ---------- */
   #field{position:relative;flex:1;min-height:0;overflow:hidden;cursor:pointer;z-index:1;touch-action:none}
   #scene{position:absolute;inset:0;width:100%;height:100%;z-index:1}
-  #backdrop{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center bottom;background-repeat:no-repeat}
+  #backdrop{position:absolute;inset:-8px;z-index:0;background-size:cover;background-position:center bottom;background-repeat:no-repeat;filter:blur(3px) saturate(.5)}
   #aim{transition:fill .15s}
   #aim.danger{fill:url(#aimbad)}
 
@@ -157,19 +157,16 @@
 
   /* point / feedback floaters */
   .float{
-    position:absolute;z-index:560;font-family:var(--head);font-weight:900;font-size:24px;
+    position:absolute;z-index:560;font-family:var(--head);font-weight:900;font-size:20px;
     pointer-events:none;white-space:nowrap;animation:floatUp .8s cubic-bezier(.2,.8,.3,1) forwards;
     text-shadow:0 2px 0 rgba(0,0,0,.55),0 4px 12px rgba(0,0,0,.6);
   }
-  .float.big{font-size:34px}
+  .float.big{font-size:26px}
   .float.small{font-size:16px;letter-spacing:.04em}
   @keyframes floatUp{0%{transform:translate(-50%,0) scale(.85);opacity:0}15%{transform:translate(-50%,-4px) scale(1);opacity:1}70%{opacity:1}100%{transform:translate(-50%,-22px);opacity:0}}
 
   /* catch glow band where the box sits */
-  #catchline{
-    position:absolute;left:0;bottom:0;width:100%;height:120px;z-index:2;pointer-events:none;
-    background:linear-gradient(0deg, rgba(255,153,0,.2), transparent);
-  }
+  #catchline{display:none}
 
   /* ---------- THE BOX ---------- */
   #box{
@@ -215,10 +212,10 @@
   @keyframes banner{0%{opacity:0;transform:scale(.4) rotate(-6deg)}14%{opacity:1;transform:scale(1.08) rotate(1deg)}22%{transform:scale(1) rotate(0)}78%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.1) translateY(-20px)}}
 
   /* swipe hint */
-  #hint{position:absolute;left:50%;bottom:24%;z-index:565;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;transition:opacity .35s}
+  #hint{position:absolute;left:50%;top:10px;z-index:565;transform:translateX(-50%);display:flex;flex-direction:column-reverse;align-items:center;gap:4px;pointer-events:none;transition:opacity .35s}
   #hint[hidden]{display:flex;opacity:0}
   #hint .hand{font-size:42px;animation:tap 1.2s ease-in-out infinite;filter:drop-shadow(0 4px 8px rgba(0,0,0,.6))}
-  #hint .txt{font-weight:700;font-size:14px;background:rgba(0,0,0,.72);border:1px solid var(--line);padding:7px 12px;border-radius:999px;white-space:nowrap}
+  #hint .txt{font-weight:700;font-size:14px;background:rgba(0,0,0,.72);border:1px solid var(--line);padding:7px 14px;border-radius:16px;width:max-content;max-width:min(300px,80vw);text-align:center;line-height:1.3}
   @keyframes tap{50%{transform:scale(.82)}}
   /* tap-zone cues in the bottom corners */
   .tapcue{position:absolute;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:555;width:46px;height:46px;border-radius:50%;
@@ -447,7 +444,7 @@
     superdeal:"",
     box:"assets/box.png",
     badges:{ orange:"assets/badge-orange.png",black:"assets/badge-black.png" },
-    scene:{ bg:"assets/scene-bg.jpg",belt:"assets/scene-belt.jpg",horizon:"assets/scene-horizon.jpg",start:"assets/screen-start.jpg",gameover:"assets/screen-gameover.jpg" }
+    scene:{ bg:"assets/scene-bg.jpg",start:"assets/screen-start.jpg",gameover:"assets/screen-gameover.jpg" }
   };
   var PRODUCTS=[
     {k:"phone",e:"📱"},{k:"headphones",e:"🎧"},{k:"sneakers",e:"👟"},{k:"watch",e:"⌚"},
@@ -575,37 +572,24 @@
     var LX=Math.min(0.62,laneMax); LANES=[-LX,0,LX];
     box.style.width=boxW+"px"; box.style.height=boxH+"px";
     box.style.marginLeft=(-boxW/2)+"px"; box.style.marginTop=(-boxH*0.6)+"px";
-    var nl=cx-halfWnear, nr=cx+halfWnear, fl=cx-halfWnear*sFar, fr=cx+halfWnear*sFar;
     scene.setAttribute("viewBox","0 0 "+w+" "+h);
-    var hasBg=!!ASSETS.scene.bg, beltTex=ASSETS.scene.belt, horiz=ASSETS.scene.horizon;
+    // Clean track: three flat lanes on a dark belt. No textures, glows or bright spots, so the
+    // only bright things on screen are the items and the box.
+    function quad(a,b){ return xOf(a,sFar)+','+yVanish+' '+xOf(b,sFar)+','+yVanish+' '+xOf(b,1)+','+yNear+' '+xOf(a,1)+','+yNear; }
+    var m=LANES[2]/2, edges=[-1,-m,m,1], lanes='';
+    for(var li=0;li<3;li++) lanes+='<polygon points="'+quad(edges[li],edges[li+1])+'" fill="'+(li===1?'#1e1e26':'#18181f')+'"/>';
     var defs='<defs>'+
-      '<radialGradient id="horizon" cx="50%" cy="'+(yVanish/h*100)+'%" r="60%"><stop offset="0" stop-color="#2a2118"/><stop offset="45%" stop-color="#14140f"/><stop offset="100%" stop-color="#0b0b0d"/></radialGradient>'+
-      '<linearGradient id="beltg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a1a20"/><stop offset="100%" stop-color="#242430"/></linearGradient>'+
-      '<linearGradient id="beltfade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".75"/><stop offset=".45" stop-color="#000" stop-opacity="0"/></linearGradient>'+
-      '<linearGradient id="aimgood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9900" stop-opacity="0"/><stop offset="1" stop-color="#ffba00" stop-opacity=".22"/></linearGradient>'+
-      '<linearGradient id="aimbad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ec2326" stop-opacity="0"/><stop offset="1" stop-color="#ec2326" stop-opacity=".4"/></linearGradient>'+
-      '<linearGradient id="rail" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffba00" stop-opacity=".35"/><stop offset="1" stop-color="#ff9900"/></linearGradient>'+
-      '<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4"/></filter>'+
-      (beltTex?'<pattern id="belttex" patternUnits="userSpaceOnUse" width="'+(halfWnear*0.95)+'" height="'+(h*0.16)+'"><image href="'+beltTex+'" x="0" y="0" width="'+(halfWnear*0.95)+'" height="'+(h*0.16)+'" preserveAspectRatio="xMidYMid slice"/></pattern>':'')+
+      '<linearGradient id="beltfade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b0b0d" stop-opacity=".9"/><stop offset=".35" stop-color="#0b0b0d" stop-opacity="0"/></linearGradient>'+
+      '<linearGradient id="aimgood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".1"/></linearGradient>'+
+      '<linearGradient id="aimbad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ec2326" stop-opacity="0"/><stop offset="1" stop-color="#ec2326" stop-opacity=".35"/></linearGradient>'+
     '</defs>';
-    var bgLayer=hasBg?'':'<rect x="0" y="0" width="'+w+'" height="'+h+'" fill="url(#horizon)"/>';
-    var horizLayer=horiz?'<image href="'+horiz+'" x="0" y="0" width="'+w+'" height="'+(h*0.52)+'" preserveAspectRatio="xMidYMax slice" opacity="0.72"/>':'';
-    var beltFill=beltTex?'url(#belttex)':'url(#beltg)';
-    var belt=fl+','+yVanish+' '+fr+','+yVanish+' '+nr+','+yNear+' '+nl+','+yNear;
     scene.innerHTML=
-      defs+bgLayer+horizLayer+
-      '<circle cx="'+cx+'" cy="'+yVanish+'" r="'+(w*0.18)+'" fill="rgba(255,153,0,.10)"/>'+
-      '<circle cx="'+cx+'" cy="'+yVanish+'" r="'+(w*0.09)+'" fill="rgba(255,186,0,.16)"/>'+
-      '<polygon points="'+belt+'" fill="'+beltFill+'"/>'+
-      '<polygon points="'+belt+'" fill="url(#beltg)" opacity="'+(beltTex?0.22:0)+'"/>'+
-      '<polygon points="'+belt+'" fill="url(#beltfade)"/>'+
+      defs+lanes+
       '<polygon id="aim" fill="url(#aimgood)" points=""/>'+
-      [-1,1].map(function(sd){ var m=sd*LANES[2]/2; return '<line x1="'+xOf(m,sFar)+'" y1="'+yVanish+'" x2="'+xOf(m,1)+'" y2="'+yNear+'" stroke="rgba(255,220,160,.34)" stroke-width="3" stroke-dasharray="12 12"/>'; }).join('')+
-      // glowing side rails
-      '<g filter="url(#glow)" opacity=".8"><line x1="'+fl+'" y1="'+yVanish+'" x2="'+nl+'" y2="'+yNear+'" stroke="#ff9900" stroke-width="8"/><line x1="'+fr+'" y1="'+yVanish+'" x2="'+nr+'" y2="'+yNear+'" stroke="#ff9900" stroke-width="8"/></g>'+
-      '<polygon points="'+fl+','+yVanish+' '+nl+','+yNear+' '+(nl+10)+','+yNear+' '+(fl+2)+','+yVanish+'" fill="url(#rail)"/>'+
-      '<polygon points="'+fr+','+yVanish+' '+nr+','+yNear+' '+(nr-10)+','+yNear+' '+(fr-2)+','+yVanish+'" fill="url(#rail)"/>'+
-      '<circle cx="'+cx+'" cy="'+yVanish+'" r="4" fill="#ffba00"/>';
+      [-m,m].map(function(x){ return '<line x1="'+xOf(x,sFar)+'" y1="'+yVanish+'" x2="'+xOf(x,1)+'" y2="'+yNear+'" stroke="rgba(255,255,255,.2)" stroke-width="2"/>'; }).join('')+
+      // thin solid side rails
+      [-1,1].map(function(x){ return '<line x1="'+xOf(x,sFar)+'" y1="'+yVanish+'" x2="'+xOf(x,1)+'" y2="'+yNear+'" stroke="#ff9900" stroke-width="4" stroke-linecap="round"/>'; }).join('')+
+      '<polygon points="'+quad(-1,1)+'" fill="url(#beltfade)"/>';
     aimEl=scene.querySelector("#aim");
     sizeFx();
   }
@@ -653,7 +637,7 @@
     if(!fxRaf){ fxLast=performance.now(); fxRaf=requestAnimationFrame(fxLoop); }
   }
   function fxLoop(t){
-    var dt=Math.min(0.05,(t-fxLast)/1000); fxLast=t;
+    var dt=Math.max(0,Math.min(0.05,(t-fxLast)/1000)); fxLast=t;
     fxCtx.setTransform(dpr,0,0,dpr,0,0); fxCtx.clearRect(0,0,fxCanvas.width,fxCanvas.height);
     for(var i=P.length-1;i>=0;i--){
       var p=P[i]; p.life+=dt; if(p.life>=p.max){ P.splice(i,1); continue; }
@@ -736,7 +720,7 @@
       box.classList.remove("catch"); void box.offsetWidth; box.classList.add("catch");
       if(it.kind==="life"){
         S.lives=Math.min(3,S.lives+1); renderLives(S.lives-1,"gain"); sLife(); buzz(20);
-        floater("+1 ★",bx,fy,"#4fe0a6","big"); burst(bx,boxY-20,26,C_LIFE,{up:220});
+        floater("+1 ★",bx,fy,"#4fe0a6","big"); burst(bx,boxY-20,12,C_LIFE,{up:60,speed:160,life:.45});
         return;
       }
       var mult=multOf(S.combo), gain=it.pts*mult;
@@ -744,11 +728,11 @@
       setScore(S.score,true); renderMeter();
       if(it.kind==="super"){
         S.supers++; sSuper(); buzz([15,40,15]); pulseClass($("#flash"),"on");
-        floater("SUPER DEAL +"+gain,bx,fy-10,"#ffba00","big"); burst(bx,boxY-20,60,C_SUPER,{speed:420,up:260,size:8,life:1});
+        floater("SUPER DEAL +"+gain,bx,fy-10,"#ffba00","big"); burst(bx,boxY-20,24,C_SUPER,{speed:220,up:80,size:7,life:.6});
       }else if(it.kind==="gold"){
-        sGold(); buzz(10); floater("+"+gain,bx,fy,"#ffba00"); burst(bx,boxY-20,26,C_GOLD,{up:200});
+        sGold(); buzz(10); floater("+"+gain,bx,fy,"#ffba00"); burst(bx,boxY-20,12,C_GOLD,{up:60,speed:160,life:.45});
       }else{
-        sGood(S.combo); floater("+"+gain,bx,fy,"#ffce6b"); burst(bx,boxY-20,14,C_GOOD,{up:160,speed:200});
+        sGood(S.combo); floater("+"+gain,bx,fy,"#ffce6b"); burst(bx,boxY-20,8,C_GOOD,{up:40,speed:140,life:.4});
       }
       if(multOf(S.combo)>mult){
         sMult(); setTimeout(function(){ floater("COMBO x"+multOf(S.combo)+" !",cx,boxY-boxW*1.1,"#fff","big"); },120);
@@ -787,7 +771,7 @@
   function loseLife(x){
     S.lives--; S.invuln=S.elapsed+1.1; S.freeze=0.12; var hadCombo=S.combo>0; S.combo=0; renderMeter(hadCombo); renderLives(S.lives,"lost"); sBad();
     floater("−1 ★", x==null?cx:x, boxY-boxW*0.55, "#ff5b5d","big");
-    burst(x==null?cx:x,boxY-20,30,C_BAD,{speed:360,up:140,size:7});
+    burst(x==null?cx:x,boxY-20,14,C_BAD,{speed:200,up:50,size:6,life:.45});
     box.classList.remove("hit"); void box.offsetWidth; box.classList.add("hit");
     pulseClass($("#hurt"),"on"); buzz(S.lives<=0?[80,60,160]:90);
     if(S.lives<=0) endRun();
@@ -809,7 +793,7 @@
   function tick(ts){
     if(!running) return;
     if(paused){ lastT=ts; raf=requestAnimationFrame(tick); return; }
-    var dt=Math.min(0.05,(ts-lastT)/1000)||0; lastT=ts;
+    var dt=Math.max(0,Math.min(0.05,(ts-lastT)/1000))||0; lastT=ts; // rAF time can trail performance.now()
     if(S.freeze>0){ S.freeze-=dt; raf=requestAnimationFrame(tick); return; } // brief hit-stop sells the impact
     S.elapsed+=dt;
     box.classList.toggle("blink",S.elapsed<S.invuln);
@@ -988,7 +972,7 @@
   // ---- apply loaded images ----
   function applyAssets(){
     var sc=ASSETS.scene;
-    if(sc.bg){ $("#backdrop").style.backgroundImage="linear-gradient(180deg,rgba(11,11,13,.3),rgba(11,11,13,.72)),url('"+sc.bg+"')"; }
+    if(sc.bg){ $("#backdrop").style.backgroundImage="linear-gradient(180deg,rgba(11,11,13,.82),rgba(11,11,13,.9)),url('"+sc.bg+"')"; }
     if(sc.start){ startScreen.style.background="radial-gradient(130% 80% at 50% 16%, rgba(8,8,10,.42), rgba(5,5,6,.9)),url('"+sc.start+"') center/cover"; }
     if(sc.gameover){ overScreen.style.background="radial-gradient(130% 80% at 50% 32%, rgba(8,8,10,.55), rgba(5,5,6,.93)),url('"+sc.gameover+"') center/cover"; }
     if(ASSETS.box){ boxSquash.innerHTML='<img src="'+ASSETS.box+'" alt="" draggable="false">'; }
