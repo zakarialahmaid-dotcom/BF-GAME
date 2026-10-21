@@ -214,16 +214,9 @@
   /* swipe hint */
   #hint{position:absolute;left:50%;top:10px;z-index:565;transform:translateX(-50%);display:flex;flex-direction:column-reverse;align-items:center;gap:4px;pointer-events:none;transition:opacity .35s}
   #hint[hidden]{display:flex;opacity:0}
-  #hint .hand{font-size:42px;animation:tap 1.2s ease-in-out infinite;filter:drop-shadow(0 4px 8px rgba(0,0,0,.6))}
+  #hint .hand{font-size:42px;animation:slide 1.6s ease-in-out infinite;filter:drop-shadow(0 4px 8px rgba(0,0,0,.6))}
   #hint .txt{font-weight:700;font-size:14px;background:rgba(0,0,0,.72);border:1px solid var(--line);padding:7px 14px;border-radius:16px;width:max-content;max-width:min(300px,80vw);text-align:center;line-height:1.3}
-  @keyframes tap{50%{transform:scale(.82)}}
-  /* tap-zone cues in the bottom corners */
-  .tapcue{position:absolute;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:555;width:46px;height:46px;border-radius:50%;
-    display:grid;place-items:center;font-family:var(--head);font-weight:900;font-size:30px;line-height:1;padding-bottom:4px;
-    color:rgba(255,255,255,.6);background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.14);pointer-events:none}
-  #cueL{left:max(12px,env(safe-area-inset-left,0px))} #cueR{right:max(12px,env(safe-area-inset-right,0px))}
-  .tapcue.on{animation:cue .25s ease-out}
-  @keyframes cue{0%{background:var(--jumia);color:#000;transform:scale(1.12)}100%{transform:none}}
+  @keyframes slide{0%,100%{transform:translateX(-28px)}50%{transform:translateX(28px)}}
 
   /* ---------- OVERLAYS ---------- */
   .overlay{
@@ -354,8 +347,7 @@
     </div>
     <div id="danger"></div><div id="hurt"></div><div id="flash"></div>
     <div id="banner"><div class="b1"></div><div class="b2"></div></div>
-    <div id="hint" hidden><div class="hand">👆</div><div class="txt">Touche à gauche ou à droite pour changer de voie</div></div>
-    <div class="tapcue" id="cueL" aria-hidden="true">‹</div><div class="tapcue" id="cueR" aria-hidden="true">›</div>
+    <div id="hint" hidden><div class="hand">👆</div><div class="txt">Glisse ton doigt pour déplacer la caisse</div></div>
     <div id="count" hidden><span></span></div>
   </div>
 
@@ -363,7 +355,7 @@
   <div class="overlay" id="startScreen">
     <div class="brandrow"><span class="wordmark">JUMIA<b>★</b></span><span class="bf-badge">BLACK <span class="o">FRIDAY</span></span></div>
     <h1 class="title">La Caisse<br><span class="hl">Rush</span></h1>
-    <p class="subtitle">Les produits arrivent sur 3 voies. Touche à gauche ou à droite de l'écran pour changer de voie, attrape les bonnes affaires et esquive les arnaques&nbsp;!</p>
+    <p class="subtitle">Les produits arrivent sur 3 voies. Glisse ton doigt pour déplacer la caisse, attrape les bonnes affaires et esquive les arnaques&nbsp;!</p>
     <div class="how">
       <div class="how-row"><div class="chip g" data-art="products/phone">📦</div><div><b>Attrape</b> les produits Jumia&nbsp;: <b>+10</b>, et <b>+25</b> pour les deals dorés.</div></div>
       <div class="how-row"><div class="chip s" data-art="superdeal">★</div><div><b>Super Deal</b> noir&nbsp;: <b>+50</b>, vise-le&nbsp;!</div></div>
@@ -372,7 +364,7 @@
     </div>
     <button class="btn pulse" id="playBtn" disabled>Chargement…</button>
     <div class="best">Meilleur score&nbsp;: <b id="bestStart">0</b></div>
-    <div class="keys"><kbd>←</kbd> <kbd>→</kbd> ou clic gauche / droite pour changer de voie · <kbd>Espace</kbd> pause</div>
+    <div class="keys"><kbd>←</kbd> <kbd>→</kbd> ou la souris pour changer de voie · <kbd>Espace</kbd> pause</div>
   </div>
 
   <!-- PAUSE -->
@@ -423,7 +415,7 @@
       countWrap=$("#count"), countSpan=countWrap.firstElementChild,
       startScreen=$("#startScreen"), overScreen=$("#overScreen"), pauseScreen=$("#pauseScreen"),
       soundBtn=$("#sound"), pauseBtn=$("#pause"), levelEl=$("#level"), playBtn=$("#playBtn"),
-      banner=$("#banner"), hint=$("#hint"), cueL=$("#cueL"), cueR=$("#cueR"), fxCanvas=$("#fx"), toastEl=$("#toast");
+      banner=$("#banner"), hint=$("#hint"), fxCanvas=$("#fx"), toastEl=$("#toast");
   var aimEl=null;
   var RM=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -491,7 +483,7 @@
   muted=load("jumia_cr_muted")==="1";
 
   function freshState(){
-    return {score:0,lives:3,combo:0,maxCombo:0,caught:0,supers:0,items:[],fx:[],spawnT:0,elapsed:0,boxLane:0,targetLane:0,prevLane:0,lean:0,level:0,mult:1,moved:false,invuln:0,freeze:0,lastSpawn:null,li:1,switchT:-9,switchFrom:-1};
+    return {score:0,lives:3,combo:0,maxCombo:0,caught:0,supers:0,items:[],fx:[],spawnT:0,elapsed:0,boxLane:0,targetLane:0,prevLane:0,lean:0,level:0,mult:1,moved:false,invuln:0,freeze:0,lastSpawn:null,li:1,switchT:-9,switchFrom:-1,dragging:false};
   }
   function multOf(c){ return 1+Math.floor(c/5); }
 
@@ -596,7 +588,7 @@
   // translucent lane in front of the box: shows exactly where you'll catch
   function placeAim(){
     if(!aimEl)return;
-    var hw=boxW*0.34, xn=xOf(S.boxLane,1), xf=xOf(S.boxLane,sFar);
+    var ln=LANES[boxLi()], hw=boxW*0.34, xn=xOf(ln,1), xf=xOf(ln,sFar); // the lane that counts, even mid-slide
     aimEl.setAttribute("points",(xf-hw*sFar)+","+yVanish+" "+(xf+hw*sFar)+","+yVanish+" "+(xn+hw)+","+boxY+" "+(xn-hw)+","+boxY);
   }
 
@@ -802,7 +794,10 @@
     if(lvl!==S.level){ S.level=lvl; levelEl.textContent="NIV "+lvl; if(lvl>1) levelUp(lvl); }
 
     // box follow
-    S.targetLane=LANES[S.li];
+    if(S.dragging){
+      var nl=boxLi();
+      if(nl!==S.li){ S.switchFrom=S.li; S.switchT=S.elapsed; S.li=nl; if(!S.moved){ S.moved=true; hideHint(); } }
+    }else S.targetLane=LANES[S.li];
     S.boxLane += (S.targetLane-S.boxLane)*Math.min(1,dt*20);
     placeBox(dt); placeAim();
     if(S.elapsed>6) hideHint();
@@ -918,29 +913,44 @@
   }
 
   // ---- input ----
-  // three lanes: tap/click the left or right half of the screen (or press an arrow key) to hop one lane.
-  // Acting on pointerdown, not on release, keeps it instant.
+  // touch: slide anywhere and the box follows your finger (relative, so the finger never hides it);
+  // mouse: the box follows the cursor. Letting go settles it into the nearest of the three lanes.
+  // Arrow keys hop one lane at a time.
   function stepLane(dir){
     if(!running||paused||!live) return;
-    pulseClass(dir<0?cueL:cueR,"on");
     var n=Math.max(0,Math.min(2,S.li+dir)); if(n===S.li) return;
     S.switchFrom=S.li; S.switchT=S.elapsed; S.li=n;
     tone(dir<0?520:620,0.05,"sine",0.03);
     if(!S.moved){ S.moved=true; hideHint(); }
   }
+  function laneFromX(clientX){ var r=field.getBoundingClientRect(); return (clientX-r.left-cx)/halfWnear; }
+  function clampLane(l){ return l<-laneMax?-laneMax:(l>laneMax?laneMax:l); }
+  function release(){ if(S){ S.dragging=false; S.li=boxLi(); } }
+  var drag=null;
   field.addEventListener("pointerdown",function(e){
     if(!running||paused)return;
-    var r=field.getBoundingClientRect(); stepLane(e.clientX-r.left<r.width/2?-1:1);
+    S.dragging=true;
+    if(e.pointerType==="mouse") S.targetLane=clampLane(laneFromX(e.clientX));
+    else{ drag={id:e.pointerId,x:e.clientX,lane:S.boxLane}; try{field.setPointerCapture(e.pointerId);}catch(_){} }
     if(e.cancelable)e.preventDefault();
   });
+  field.addEventListener("pointermove",function(e){
+    if(!running||paused)return;
+    if(e.pointerType==="mouse"){ S.dragging=true; S.targetLane=clampLane(laneFromX(e.clientX)); }
+    else if(drag&&drag.id===e.pointerId){ S.targetLane=clampLane(drag.lane+(e.clientX-drag.x)/halfWnear*1.35); }
+    if(e.cancelable)e.preventDefault();
+  });
+  function endDrag(e){ if(drag&&drag.id===e.pointerId){ drag=null; release(); } }
+  field.addEventListener("pointerup",endDrag); field.addEventListener("pointercancel",endDrag);
+  field.addEventListener("pointerleave",function(e){ if(e.pointerType==="mouse") release(); });
   window.addEventListener("keydown",function(e){
     var k=e.key, lk=k.length===1?k.toLowerCase():k;
     if(!running){
       if((k==="Enter"||k===" ")&&!startScreen.hidden&&!playBtn.disabled&&document.activeElement!==playBtn){ startGame(); e.preventDefault(); }
       return;
     }
-    if(k==="ArrowLeft"||lk==="a"||lk==="q"){ if(!e.repeat) stepLane(-1); e.preventDefault(); }
-    else if(k==="ArrowRight"||lk==="d"){ if(!e.repeat) stepLane(1); e.preventDefault(); }
+    if(k==="ArrowLeft"||lk==="a"||lk==="q"){ release(); if(!e.repeat) stepLane(-1); e.preventDefault(); }
+    else if(k==="ArrowRight"||lk==="d"){ release(); if(!e.repeat) stepLane(1); e.preventDefault(); }
     else if((k===" "||lk==="p"||k==="Escape")&&live&&!e.repeat){
       if(paused&&document.activeElement&&document.activeElement.tagName==="BUTTON"&&k===" ") return; // let Space press the focused button
       togglePause(); e.preventDefault();
